@@ -1,4 +1,4 @@
-/* 
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -56,9 +56,10 @@ public class CommandLine {
      */
     private final boolean isFile;
 
+    private final boolean isExpand;
     /**
      * Create a command line from a string.
-     * 
+     *
      * @param line the first element becomes the executable, the rest the arguments
      * @return the parsed command line
      * @throws IllegalArgumentException If line is null or all whitespace
@@ -76,7 +77,7 @@ public class CommandLine {
      * @throws IllegalArgumentException If line is null or all whitespace
      */
     public static CommandLine parse(final String line, final Map<String, ?> substitutionMap) {
-                
+
         if (line == null) {
             throw new IllegalArgumentException("Command line can not be null");
         } else if (line.trim().length() == 0) {
@@ -84,7 +85,7 @@ public class CommandLine {
         } else {
             final String[] tmp = translateCommandline(line);
 
-            final CommandLine cl = new CommandLine(tmp[0]);
+            final CommandLine cl = new CommandLine(tmp[0], true);
             cl.setSubstitutionMap(substitutionMap);
             for (int i = 1; i < tmp.length; i++) {
                 cl.addArgument(tmp[i]);
@@ -99,9 +100,13 @@ public class CommandLine {
      *
      * @param executable the executable
      */
-    public CommandLine(final String executable) {
+    public CommandLine(final String executable, final boolean isExpand) {
         this.isFile=false;
+        this.isExpand=isExpand;
         this.executable=toCleanExecutable(executable);
+    }
+    public CommandLine(final String executable) {
+        this(executable, true);
     }
 
     /**
@@ -111,6 +116,7 @@ public class CommandLine {
      */
     public CommandLine(final File executable) {
         this.isFile=true;
+        this.isExpand = true;
         this.executable=toCleanExecutable(executable.getAbsolutePath());
     }
 
@@ -122,6 +128,7 @@ public class CommandLine {
     public CommandLine(final CommandLine other)
     {
         this.executable = other.getExecutable();
+        this.isExpand = true;
         this.isFile = other.isFile();
         this.arguments.addAll(other.arguments);
 
@@ -140,7 +147,7 @@ public class CommandLine {
 
     /**
      * Returns the executable.
-     * 
+     *
      * @return The executable
      */
     public String getExecutable() {
@@ -153,7 +160,7 @@ public class CommandLine {
     /**
      * Was a file being used to set the executable?
      *
-     * @return true if a file was used for setting the executable 
+     * @return true if a file was used for setting the executable
      */
     public boolean isFile() {
         return isFile;
@@ -161,7 +168,7 @@ public class CommandLine {
 
     /**
      * Add multiple arguments. Handles parsing of quotes and whitespace.
-     * 
+     *
      * @param addArguments An array of arguments
      * @return The command line itself
      */
@@ -190,8 +197,8 @@ public class CommandLine {
      * Add multiple arguments. Handles parsing of quotes and whitespace.
      * Please note that the parsing can have undesired side-effects therefore
      * it is recommended to build the command line incrementally.
-     * 
-     * @param addArguments An string containing multiple arguments. 
+     *
+     * @param addArguments An string containing multiple arguments.
      * @return The command line itself
      */
     public CommandLine addArguments(final String addArguments) {
@@ -252,9 +259,26 @@ public class CommandLine {
        return this;
    }
 
+   public CommandLine addArgument(final String argument, final boolean handleQuoting, final boolean isTrim) {
+
+              if (argument == null)
+              {
+                  return this;
+              }
+
+              // check if we can really quote the argument - if not throw an
+              // IllegalArgumentException
+              if (handleQuoting)
+              {
+                  StringUtils.quoteArgument(argument);
+              }
+
+              arguments.add(new Argument(argument, handleQuoting, isTrim));
+              return this;
+   }
     /**
      * Returns the expanded and quoted command line arguments.
-     *  
+     *
      * @return The quoted arguments
      */
     public String[] getArguments() {
@@ -265,7 +289,11 @@ public class CommandLine {
 
         for (int i=0; i<result.length; i++) {
             currArgument = arguments.get(i);
-            expandedArgument = expandArgument(currArgument.getValue());
+            if (isExpand) {
+                expandedArgument = expandArgument(currArgument.getValue());
+            } else {
+                expandedArgument = currArgument.getValue();
+            }
             result[i] = currArgument.isHandleQuoting() ? StringUtils.quoteArgument(expandedArgument) : expandedArgument;
         }
 
@@ -282,7 +310,7 @@ public class CommandLine {
     /**
      * Set the substitutionMap to expand variables in the
      * command line.
-     * 
+     *
      * @param substitutionMap the map
      */
     public void setSubstitutionMap(final Map<String, ?> substitutionMap) {
@@ -304,7 +332,7 @@ public class CommandLine {
     /**
      * Stringify operator returns the command line as a string.
      * Parameters are correctly quoted when containing a space or
-     * left untouched if the are already quoted. 
+     * left untouched if the are already quoted.
      *
      * @return the command line as single string
      */
@@ -425,6 +453,15 @@ public class CommandLine {
 
         private final String value;
         private final boolean handleQuoting;
+
+        private Argument(final String value, final boolean handleQuoting, final boolean isTrim) {
+            if (isTrim) {
+                this.value = value.trim();
+            } else {
+                this.value = value;
+            }
+            this.handleQuoting = handleQuoting;
+        }
 
         private Argument(final String value, final boolean handleQuoting)
         {

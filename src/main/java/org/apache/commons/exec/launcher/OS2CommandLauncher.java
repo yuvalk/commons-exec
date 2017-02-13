@@ -1,4 +1,4 @@
-/* 
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -45,7 +45,7 @@ public class OS2CommandLauncher extends CommandLauncherProxy {
     /**
      * Launches the given command in a new process, in the given working
      * directory.
-     * 
+     *
      * @param cmd
      *            the command line to execute as an array of strings
      * @param env
@@ -62,7 +62,7 @@ public class OS2CommandLauncher extends CommandLauncherProxy {
             return exec(cmd, env);
         }
 
-        final CommandLine newCmd = new CommandLine("cmd");
+        final CommandLine newCmd = new CommandLine("cmd", true);
         newCmd.addArgument("/c");
         newCmd.addArguments(cmd.toStrings());
 
